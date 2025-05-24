@@ -223,7 +223,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
     switch (name) {
       case "read_file": {
-        const filePath = path.resolve(args.path);
+        if (!args || typeof args !== 'object') {
+          throw new Error('Invalid arguments');
+        }
+        const typedArgs = args as { path: string; encoding?: string };
+        const filePath = path.resolve(typedArgs.path);
         validatePath(filePath);
         
         // ファイルサイズをチェック
@@ -232,7 +236,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           throw new Error(`ファイルサイズが大きすぎます: ${stats.size} bytes`);
         }
         
-        const content = await fs.readFile(filePath, args.encoding || "utf-8");
+        const content = await fs.readFile(filePath, { encoding: (typedArgs.encoding || "utf-8") as BufferEncoding });
         
         return {
           content: [
@@ -245,42 +249,50 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
       
       case "write_file": {
-        const filePath = path.resolve(args.path);
+        if (!args || typeof args !== 'object') {
+          throw new Error('Invalid arguments');
+        }
+        const typedArgs = args as { path: string; content: string; encoding?: string; append?: boolean };
+        const filePath = path.resolve(typedArgs.path);
         validatePath(filePath);
         
         // ディレクトリが存在しない場合は作成
         const dir = path.dirname(filePath);
         await fs.mkdir(dir, { recursive: true });
         
-        if (args.append) {
-          await fs.appendFile(filePath, args.content, args.encoding || "utf-8");
+        if (typedArgs.append) {
+          await fs.appendFile(filePath, typedArgs.content, { encoding: (typedArgs.encoding || "utf-8") as BufferEncoding });
         } else {
-          await fs.writeFile(filePath, args.content, args.encoding || "utf-8");
+          await fs.writeFile(filePath, typedArgs.content, { encoding: (typedArgs.encoding || "utf-8") as BufferEncoding });
         }
         
         return {
           content: [
             {
               type: "text",
-              text: `ファイルを${args.append ? "追記" : "書き込み"}しました: ${filePath}`,
+              text: `ファイルを${typedArgs.append ? "追記" : "書き込み"}しました: ${filePath}`,
             },
           ],
         };
       }
       
       case "list_files": {
-        const dirPath = path.resolve(args.path);
+        if (!args || typeof args !== 'object') {
+          throw new Error('Invalid arguments');
+        }
+        const typedArgs = args as { path: string; pattern?: string; recursive?: boolean };
+        const dirPath = path.resolve(typedArgs.path);
         validatePath(dirPath);
         
         let files: string[];
         
-        if (args.pattern) {
-          const pattern = args.recursive 
-            ? path.join(dirPath, "**", args.pattern)
-            : path.join(dirPath, args.pattern);
+        if (typedArgs.pattern) {
+          const pattern = typedArgs.recursive 
+            ? path.join(dirPath, "**", typedArgs.pattern)
+            : path.join(dirPath, typedArgs.pattern);
           files = await glob(pattern);
         } else {
-          if (args.recursive) {
+          if (typedArgs.recursive) {
             files = await glob(path.join(dirPath, "**/*"));
           } else {
             const entries = await fs.readdir(dirPath, { withFileTypes: true });
@@ -313,7 +325,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             {
               type: "text",
               text: `ファイル一覧 (${dirPath}):\n${validFileInfos.map(info => 
-                `${info.type === "directory" ? "[DIR]" : "[FILE]"} ${info.path} (${info.size} bytes, ${info.modified})`
+                `${info!.type === "directory" ? "[DIR]" : "[FILE]"} ${info!.path} (${info!.size} bytes, ${info!.modified})`
               ).join("\n")}`,
             },
           ],
@@ -321,7 +333,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
       
       case "file_info": {
-        const filePath = path.resolve(args.path);
+        if (!args || typeof args !== 'object') {
+          throw new Error('Invalid arguments');
+        }
+        const typedArgs = args as { path: string };
+        const filePath = path.resolve(typedArgs.path);
         validatePath(filePath);
         
         const stats = await fs.stat(filePath);
@@ -348,10 +364,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
       
       case "create_directory": {
-        const dirPath = path.resolve(args.path);
+        if (!args || typeof args !== 'object') {
+          throw new Error('Invalid arguments');
+        }
+        const typedArgs = args as { path: string; recursive?: boolean };
+        const dirPath = path.resolve(typedArgs.path);
         validatePath(dirPath);
         
-        await fs.mkdir(dirPath, { recursive: args.recursive ?? true });
+        await fs.mkdir(dirPath, { recursive: typedArgs.recursive ?? true });
         
         return {
           content: [
@@ -364,13 +384,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
       
       case "delete_file": {
-        const filePath = path.resolve(args.path);
+        if (!args || typeof args !== 'object') {
+          throw new Error('Invalid arguments');
+        }
+        const typedArgs = args as { path: string; recursive?: boolean };
+        const filePath = path.resolve(typedArgs.path);
         validatePath(filePath);
         
         const stats = await fs.stat(filePath);
         
         if (stats.isDirectory()) {
-          await fs.rm(filePath, { recursive: args.recursive ?? false });
+          await fs.rm(filePath, { recursive: typedArgs.recursive ?? false });
         } else {
           await fs.unlink(filePath);
         }
@@ -386,8 +410,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
       
       case "move_file": {
-        const sourcePath = path.resolve(args.source);
-        const destPath = path.resolve(args.destination);
+        if (!args || typeof args !== 'object') {
+          throw new Error('Invalid arguments');
+        }
+        const typedArgs = args as { source: string; destination: string };
+        const sourcePath = path.resolve(typedArgs.source);
+        const destPath = path.resolve(typedArgs.destination);
         validatePath(sourcePath);
         validatePath(destPath);
         
@@ -407,8 +435,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
       
       case "copy_file": {
-        const sourcePath = path.resolve(args.source);
-        const destPath = path.resolve(args.destination);
+        if (!args || typeof args !== 'object') {
+          throw new Error('Invalid arguments');
+        }
+        const typedArgs = args as { source: string; destination: string };
+        const sourcePath = path.resolve(typedArgs.source);
+        const destPath = path.resolve(typedArgs.destination);
         validatePath(sourcePath);
         validatePath(destPath);
         
@@ -431,11 +463,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         throw new Error(`不明なツール: ${name}`);
     }
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return {
       content: [
         {
           type: "text",
-          text: `エラー: ${error.message}`,
+          text: `エラー: ${errorMessage}`,
         },
       ],
     };
