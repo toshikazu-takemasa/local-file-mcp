@@ -1,0 +1,42 @@
+{
+  "$schema": "https://github.com/devcontainers/spec/blob/main/schemas/devContainer.schema.json",
+  "name": "poc-mcp-sprocket",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-20-bullseye",
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "mounts": [
+    {
+      "source": "${localWorkspaceFolderBasename}-node_modules",
+      "target": "${containerWorkspaceFolder}/node_modules",
+      "type": "volume"
+    }
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": ["-dbaeumer.vscode-eslint", "biomejs.biome"],
+      "settings": {
+        "editor.codeActionsOnSave": {
+          "source.fixAll.biome": "always",
+          "source.organizeImports.biome": "always"
+        },
+        "[json]": {
+          "editor.defaultFormatter": "biomejs.biome"
+        },
+        "[jsonc]": {
+          "editor.defaultFormatter": "biomejs.biome"
+        },
+        "[typescript]": {
+          "editor.defaultFormatter": "biomejs.biome"
+        }
+      }
+    }
+  },
+  "onCreateCommand": "sh .devcontainer/scripts/onCreate.sh",
+  "postCreateCommand": "sh .devcontainer/scripts/postCreate.sh",
+  "remoteEnv": {
+    "CONTAINER_WORKSPACE_FOLDER": "${containerWorkspaceFolder}",
+    "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
+  },
+  "runArgs": ["--add-host", "host.docker.internal:host-gateway"]
+}
